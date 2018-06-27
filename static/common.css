@@ -1,0 +1,63 @@
+* {
+	-webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+html {
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-ms-text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+}
+body {
+	background: #fffffa;
+}
+h1,h2,h3,h4,h5,h6 {
+	font-weight: 400;
+}
+
+h1 {
+	margin: 50px;
+	text-align: center;
+	font-size: 24px;
+	font-family: monospace, Consolas, sans-serif;
+}
+h2 {
+	margin: 30px 0;
+	font-size: 20px;
+}
+h3 {
+	margin: 20px 0;
+	font-size: 18px;
+}
+.main {
+	width: 1000px;
+	margin: 0 auto;
+}
+.main p,
+.main center,
+.main li {
+	line-height: 1.5;
+	font-size: 13px;
+	color: #555;
+	font-family: Consolas, monospace, Helvetica, Arial, Verdana, "Microsoft YaHei", sans-serif;
+}
+.main code:not(.hljs) {
+	font-family: Monaco, Consolas, monospace, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+	background: #cfedf0;
+	border: 1px solid #cfedf0;
+	line-height: 25px;
+	color: #666;
+    border-radius: 3px;
+    padding: 0 3px;
+    margin: 1px 5px;
+}
+.main code.hljs {
+	background: #eee;
+	font: normal 12px Consolas, Monaco, monospace;
+	-webkit-font-smoothing: auto;
+}
+.main ul {
+	list-style: none;
+	padding-left: 0;
+}
