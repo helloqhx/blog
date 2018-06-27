@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 		<title>java_hashmap - Henson's Blog</title>
 		<link rel="stylesheet" href="../static/common.css">
 		<link rel="stylesheet" href="../static/highlight/tomorrow.min.css">
@@ -30,7 +31,7 @@
 </ul>
 <h3 id="-3">工具函数</h3>
 <ul>
-<li><p>1. <strong><code>hash</code>函数</strong></p>
+<li><p><strong>1. <code>hash</code>函数</strong></p>
 <p>源代码如下：</p>
 <pre><code class="Java language-Java">static final int hash(Object key) {
     int h;
@@ -38,7 +39,7 @@
 }
 </code></pre>
 <p>可以看到，HashMap是支持<code>null</code>作为key值的，其hash为0。正常情况：使用<code>hashcode</code>的高16位bits和低16位bits进行异或运算。这样做的好处在于，既保证了充分利用hashcode的全部信息，又容易计算，是效率、易用性等综合因素的一个平衡，可以参考作者的注释里的解释。</p></li>
-<li><p>2. <strong><code>tableSizeFor</code>函数</strong></p>
+<li><p><strong>2. <code>tableSizeFor</code>函数</strong></p>
 <p>源代码如下：</p>
 <pre><code class="Java language-Java">static final int tableSizeFor(int cap) {
     int n = cap - 1;
@@ -63,7 +64,7 @@
 </ul>
 <h3 id="-4">重要函数</h3>
 <ul>
-<li><p>1. <strong><code>getNode</code>函数</strong></p>
+<li><p><strong>1. <code>getNode</code>函数</strong></p>
 <pre><code class="Java language-Java">final Node&lt;K,V&gt; getNode(int hash, Object key) {
     Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; first, e; int n; K k;
     if ((tab = table) != null &amp;&amp; (n = tab.length) &gt; 0 &amp;&amp;
@@ -86,13 +87,13 @@
 </code></pre>
 <p>这个函数是HashMap<code>get</code>操作的实际实现逻辑函数。传入的参数<code>hash</code>和<code>key</code>，hash是通过上面介绍的hash计算而来。看源代码会发现很多内部函数都有这个参数。注意，第二个参数的类型为<code>Object</code>，并不是范型类型<code>K</code>。因为，这里并不需要关心其类型，只需要用到它的hashcode和equals两个函数（<em>因此，如果key对象的实现，一定要保证这两个函数一致，否则，会得到意想不到的结果</em>）。</p>
 <p><strong>实现逻辑</strong>：</p>
-<ol>
-<li>先通过<code>first = tab[(n - 1) &amp; hash]</code>得到key所在桶的第一node，如果为null，证明这个key不存在。  </li>
-<li>检查第一个node是否就是需要的，如果是直接返回。  </li>
-<li>根据第一个node的类型（通过instanceof来判断），来决定是从树中，还是链表中遍历找。</li></ol>
+<ul>
+<li>1. 先通过<code>first = tab[(n - 1) &amp; hash]</code>得到key所在桶的第一node，如果为null，证明这个key不存在。  </li>
+<li>2. 检查第一个node是否就是需要的，如果是直接返回。  </li>
+<li>3. 根据第一个node的类型（通过instanceof来判断），来决定是从树中，还是链表中遍历找。</li></ul>
 <p><strong>说明</strong>：
 判断是否是目标key，其实最终是通过<code>equals</code>函数来决定的（key为null，通过==操作确定）。但是hash却是通过<code>hashcode</code>函数来决定的，所以，key对象一定要保证这两个函数一致。</p></li>
-<li><p>2. <strong><code>putVal</code>函数</strong></p>
+<li><p><strong>2. <code>putVal</code>函数</strong></p>
 <pre><code class="Java language-Java"> final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                boolean evict) {
     Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; p; int n, i;
@@ -138,17 +139,17 @@
 </code></pre>
 <p>这个函数，是put操作的实际实现逻辑函数。参数通过名字就可以明白，<code>onlyIfAbsent</code>表示是否只有没有这个key时才插入，<code>evict</code>参数时为<code>LinkedHashMap</code>用的，这里没有用到，不做介绍。</p>
 <p><strong>实现逻辑</strong>：</p>
-<ol>
-<li>检查是否HashMap刚新建或者刚初始化，如果是，先resize分配数据</li>
-<li>计算key所应该在的桶：如果桶为空（null），直接赋值（新增）；如果不为空，查找key所在桶的链表或者树中的位置。</li>
-<li>如果在第2步中找到，则表示之前已经有值存在，需要决定是否覆盖（覆盖）；反之，则赋值（新增）。</li>
-<li>如果是<code>新增</code>，则检查是否需要树化（treeify），并记录修改次数（modCount），递增size，并判断size是否超过阈值，是否需要resize。返回null。</li>
-<li>如果是<code>覆盖</code>，则根据参数决定是否覆盖，返回已经存在的值。</li></ol>
+<ul>
+<li>1. 检查是否HashMap刚新建或者刚初始化，如果是，先resize分配数据</li>
+<li>2. 计算key所应该在的桶：如果桶为空（null），直接赋值（新增）；如果不为空，查找key所在桶的链表或者树中的位置。</li>
+<li>3. 如果在第2步中找到，则表示之前已经有值存在，需要决定是否覆盖（覆盖）；反之，则赋值（新增）。</li>
+<li>4. 如果是<code>新增</code>，则检查是否需要树化（treeify），并记录修改次数（modCount），递增size，并判断size是否超过阈值，是否需要resize。返回null。</li>
+<li>5. 如果是<code>覆盖</code>，则根据参数决定是否覆盖，返回已经存在的值。</li></ul>
 <p><strong>说明</strong>：</p>
-<ol>
-<li>HashMap在new的时候，并没有分配内部数组对应的内存，只有在第一次插入key的时候，才会触发。算是延迟初始化优化。</li>
-<li>代码中的afterNodeAccess、afterNodeInsertion等hook函数是给LinkedHashMap用的。</li></ol></li>
-<li><p>3. <strong><code>resize</code>函数</strong></p>
+<ul>
+<li>1. HashMap在new的时候，并没有分配内部数组对应的内存，只有在第一次插入key的时候，才会触发。算是延迟初始化优化。</li>
+<li>2. 代码中的afterNodeAccess、afterNodeInsertion等hook函数是给LinkedHashMap用的。</li></ul></li>
+<li><p><strong>3. <code>resize</code>函数</strong></p>
 <pre><code class="Java language-Java">final Node&lt;K,V&gt;[] resize() {
     Node&lt;K,V&gt;[] oldTab = table;
     int oldCap = (oldTab == null) ? 0 : oldTab.length;
@@ -228,17 +229,18 @@
 </code></pre>
 <p>这个函数会在新hashmap第一次插入时调用，或者插入新值时，size超过阈值时触发。</p>
 <p><strong>实现逻辑</strong></p>
-<ol>
-<li>先计算新的capacity和threshold，可以分为：新new的hashmap和已经有值的hashmap两类情况。新建的hashmap又可以分为使用无参构造器和有参构造器初始化两种。参见上面注释。</li>
-<li>分配新数组，设置新阈值。</li>
-<li>从旧数组copy值到新数组：依次遍历旧数组，如果只有一个值，直接copy；否则：<br /><ul>
-<li>如果原来是用树存储的，分裂之前的树（不做深入介绍）；  </li>
-<li>如果链表存储，遍历链表分成两部分（根据高bit位是否为1）</li></ul></li></ol>
+<ul>
+<li><p>1. 先计算新的capacity和threshold，可以分为：新new的hashmap和已经有值的hashmap两类情况。新建的hashmap又可以分为使用无参构造器和有参构造器初始化两种。参见上面注释。</p></li>
+<li><p>2. 分配新数组，设置新阈值。</p></li>
+<li><p>3. 从旧数组copy值到新数组：依次遍历旧数组，如果只有一个值，直接copy；否则：</p>
+<ul>
+<li>如果原来是用树存储的，分裂之前的树（不做深入介绍）；</li>
+<li>如果链表存储，遍历链表分成两部分（根据高bit位是否为1）</li></ul></li></ul>
 <p><strong>说明</strong></p>
-<ol>
-<li>容量达到最大时，不会进行任何操作了。</li>
-<li>扩容后需要copy数组，对于树形和链表两种桶，都要分成两部分：根据其<code>hash &amp; capacity</code>为1还是0决定。</li></ol></li>
-<li><p>4. <strong><code>removeNode</code>函数</strong></p>
+<ul>
+<li>1. 容量达到最大时，不会进行任何操作了。</li>
+<li>2. 扩容后需要copy数组，对于树形和链表两种桶，都要分成两部分：根据其<code>hash &amp; capacity</code>为1还是0决定。</li></ul></li>
+<li><p><strong>4. <code>removeNode</code>函数</strong></p>
 <pre><code class="Java language-Java">final Node&lt;K,V&gt; removeNode(int hash, Object key, Object value,
                            boolean matchValue, boolean movable) {
     Node&lt;K,V&gt;[] tab; Node&lt;K,V&gt; p; int n, index;
@@ -284,10 +286,10 @@
 </code></pre>
 <p>该函数在remove key、value、entry的时候触发。参数<code>matchValue</code>表示只有在map值也相等时才删除，<code>movable</code>在树中删除node时才会使用，不做讨论。</p>
 <p><strong>实现逻辑</strong></p>
-<ol>
-<li>查找key所在的位置</li>
-<li>如果找到，删除相应的node</li>
-<li>记录修改次数<code>modCount</code>，并递减<code>size</code></li></ol></li>
+<ul>
+<li>1. 查找key所在的位置</li>
+<li>2. 如果找到，删除相应的node</li>
+<li>3. 记录修改次数<code>modCount</code>，并递减<code>size</code></li></ul></li>
 </ul>
 <h3 id="-5">总结</h3>
 <p>　　本文分析了Java1.8 HashMap源代码实现，着重对其设计思想、实现逻辑进行介绍。其中，对put、get、remove等基本操作的内部实现函数进行了详细剖析。但是，对于红黑树部分没有做任何介绍，因为红黑树本身实现比较繁琐，我们这里只需要它是个平衡二叉树即可（对于其实现细节的旋转、插入、删除需要单独做介绍，不是本文的重点）。另外，1.8版本的代码中加入了spliterator遍历器，以及加入了Function接口。对于这部分本文也没有涉及（比较简单，看代码很容易明白，也非核心逻辑）。</p>
