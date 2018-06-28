@@ -3,12 +3,9 @@
 	margin: 0;
 	padding: 0;
 }
-html {
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-}
 body {
 	background: #fffffa;
+	font-family: Consolas, Courier, Helvetica, Arial, "Microsoft YaHei", sans-serif;
 }
 h1,h2,h3,h4,h5,h6 {
 	font-weight: 400;
@@ -18,7 +15,6 @@ h1 {
 	margin: 50px 0;
 	text-align: center;
 	font-size: 24px;
-	font-family: monospace, Consolas, sans-serif;
 }
 h2 {
 	margin: 30px 0;
@@ -53,14 +49,13 @@ h3 {
 .main li {
 	line-height: 1.5;
 	font-size: 13px;
-	color: #555;
-	font-family: Consolas, monospace, Helvetica, Arial, Verdana, "Microsoft YaHei", sans-serif;
+	color: #666;
 }
 .main p {
 	margin: 0.5em;
 }
 .main code:not(.hljs) {
-	font-family: Monaco, Consolas, monospace, sans-serif;
+	font-family: Monaco, Consolas, sans-serif;
     font-size: 12px;
     font-weight: 600;
 	background: #cfedf0;
@@ -73,6 +68,6 @@ h3 {
 }
 .main code.hljs {
 	background: #eee;
-	font: normal 12px Consolas, Monaco, monospace;
+	font: normal 12px Monaco, Consolas, sans-serif;
 	-webkit-font-smoothing: auto;
 }

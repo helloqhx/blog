@@ -52,7 +52,11 @@
 }
 </code></pre>
 <p>这个函数是用来计算内部使用的桶数组初始<code>capacity</code>的。因为capacity必须是2的幂（bit表示是一个1后面全是0），这样才能与上面计算出来的hash异或，快速定位key所在的index。因此，我们需要一个数大于等于传入的参数<code>cap</code>，且是2的幂。上面的代码使用位运算能够快速的得到这个值。</p>
-<p><strong>算法思路</strong>：1. 找到cap的bit位表示中的最左边1的位置i；2. 将i后面的所有位置为1，转化为<code>00011111111</code>这种模式；3. 加上1得到结果<code>00100000000</code>。</p>
+<p><strong>算法思路</strong>：</p>
+<ul>
+<li>1. 找到cap的bit位表示中的最左边1的位置i；</li>
+<li>2. 将i后面的所有位置为1，转化为<code>00011111111</code>这种模式；</li>
+<li>3. 加上1得到结果<code>00100000000</code>。</li></ul>
 <p><strong>具体实现</strong>：简单期间，我们使用16个bits表示一个int。假设在<code>n = cap - 1</code>后n的bit位表示为<code>0000001xxxxxxxxx</code>这种形式：前面是几位0，接着是1，后面是其他位，用<code>x</code>代替，因为我们不用关心它是啥。</p>
 <p>接下来，我们来演示算法的步骤：<br />
 <center>&nbsp;<code>0000001xxxxxxxxx</code> => <code>00000011xxxxxxxx</code>　　　　一个1变成2个1</center>
