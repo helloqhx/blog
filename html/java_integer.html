@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>java_integer - Henson's Blog</title>
+		<link rel="stylesheet" href="../static/common.css">
+		<link rel="stylesheet" href="../static/highlight/tomorrow.min.css">
+		<script src="../static/highlight/highlight.min.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		<style type="text/css">
+		</style>
+	</head>
+	<body>
+		<div class="main">
+		<h1 id="javainteger">Java Integer 源代码分析</h1>
+<h3 id="">概述</h3>
+<p>　　本文是对Java1.8的Integer类的源代码进行详细分析。<code>Integer</code>是对Java的8种<code>基本类型</code>（byte, short, char, int, long, float, double, bool）中的<code>int</code>的包装类。对于两者之间的自动<code>装箱</code>与<code>拆箱</code>的操作，本文不做介绍。只会介绍源代码中的一些有趣的函数实现、cache机制和其他的一些内容。</p>
+<h3 id="string">与string的相互转化</h3>
+<ul>
+<li><p>1. <strong><code>toString</code>函数，将int转为string</strong></p>
+<pre><code class="java language-java">public static String toString(int i, int radix) {
+    if (radix &lt; Character.MIN_RADIX || radix &gt; Character.MAX_RADIX)
+        radix = 10;
+    if (radix == 10) {
+        return toString(i);
+    }
+    char buf[] = new char[33];
+    boolean negative = (i &lt; 0);
+    int charPos = 32;
+    if (!negative) {
+        i = -i;
+    }
+    while (i &lt;= -radix) {
+        buf[charPos--] = digits[-(i % radix)];
+        i = i / radix;
+    }
+    buf[charPos] = digits[-i];
+    if (negative) {
+        buf[--charPos] = '-';
+    }
+    return new String(buf, charPos, (33 - charPos));
+}
+</code></pre>
+<p><code>toString</code>函数，将一个整数，转为指定基数（radix）的字符串表示。radix的取值范围为2 ～ 36，超出范围默认为10。代码实现分为两部分：基数为10的和其他的。代码中，对基数为10的情况，专门做了特殊处理。我们先来分析以下其他的情况。</p>
+<ul>
+<li>1. 首先分配一个长度为33的字符数组，因为一个int的字符串的表示最多为32（2进制表示），加上一个符号位；</li>
+<li>2. 如果参数是正数，转为负数处理。因为，代码针对正数和负数是统一处理的，而且，最小的负数无法转成正数（int能表示的最大正数比最小负数绝对值小1），所以，只能统一转为负数处理；</li>
+<li>3. 使用while循环，依次对radix取余，知道剩余的数不足radix；</li>
+<li>4. 最后根据正负，添加前面的符号表示，返回结果。</li></ul>
+<p>下面来看一下基数为10的代码实现。</p>
+<pre><code class="java language-java">public static String toString(int i) {
+    if (i == Integer.MIN_VALUE)
+        return "-2147483648";
+    int size = (i &lt; 0) ? stringSize(-i) + 1 : stringSize(i);
+    char[] buf = new char[size];
+    getChars(i, size, buf);
+    return new String(buf, true);
+}
+static void getChars(int i, int index, char[] buf) {
+    int q, r;
+    int charPos = index;
+    char sign = 0;
+    if (i &lt; 0) {
+        sign = '-';
+        i = -i;
+    }
+    // Generate two digits per iteration
+    while (i &gt;= 65536) {
+        q = i / 100;
+    // really: r = i - (q * 100);
+        r = i - ((q &lt;&lt; 6) + (q &lt;&lt; 5) + (q &lt;&lt; 2));
+        i = q;
+        buf [--charPos] = DigitOnes[r];
+        buf [--charPos] = DigitTens[r];
+    }
+    // Fall thru to fast mode for smaller numbers
+    // assert(i &lt;= 65536, i);
+    for (;;) {
+        q = (i * 52429) &gt;&gt;&gt; (16+3);
+        r = i - ((q &lt;&lt; 3) + (q &lt;&lt; 1));  // r = i-(q*10) ...
+        buf [--charPos] = digits [r];
+        i = q;
+        if (i == 0) break;
+    }
+    if (sign != 0) {
+        buf [--charPos] = sign;
+    }
+}
+</code></pre>
+<p>这个函数返回一个整数的10进制string表示。实现思路：先检查是否是最小的int（因为，后面的实现在最小int时会失败），然后求string表示的长度，最后调用<code>getChars</code>函数得到结果。</p>
+<p>getChars函数分为两部分逻辑：大于等于65536和小于的。对于大于的情况：每两位进行迭代，通过<code>打表</code>来获得十位和个位的数；对于小于的情况：通过将<code>除法变成乘法</code>的方式，来快速迭代。源代码的注释中，将这种方式称为<code>invariant division by multiplication</code>，每次除以10来获取数字。<code>(i * 52429) &gt;&gt;&gt; (16+3)</code> 这行代码，就是将除10转为较为高效的移位操作，其中<code>* 52429</code>未来也可能转为移位操作，就像代码中将很多乘法转为移位一样。（比如，下一行代码中的乘10就转化为了几次移位操作）。</p>
+<p>在代码中，我们发现有一个很有意思的函数，获取int对应string长度的函数<code>stringSize</code>，它的实现很简单粗暴：</p>
+<pre><code class="java language-java">final static int [] sizeTable = { 9, 99, 999, 9999, 99999, 999999, 9999999,
+                                  99999999, 999999999, Integer.MAX_VALUE };
+// Requires positive x
+static int stringSize(int x) {
+    for (int i=0; ; i++)
+        if (x &lt;= sizeTable[i])
+            return i+1;
+}
+</code></pre>
+<p>直接根据大小，来返回长度，简单有效。</p></li>
+<li><p>2. <strong><code>parseInt</code>函数，将string转为int</strong></p>
+<pre><code class="java language-java">public static int parseInt(String s, int radix) throws NumberFormatException {
+    // 这里省去了一些边界和异常的检查
+    int result = 0;
+    boolean negative = false;
+    int i = 0, len = s.length();
+    int limit = -Integer.MAX_VALUE;
+    int multmin;
+    int digit;
+    if (len &gt; 0) {
+        char firstChar = s.charAt(0);
+        if (firstChar &lt; '0') { // Possible leading "+" or "-"
+            if (firstChar == '-') {
+                negative = true;
+                limit = Integer.MIN_VALUE;
+            } else if (firstChar != '+')
+                throw NumberFormatException.forInputString(s);
+            if (len == 1) // Cannot have lone "+" or "-"
+                throw NumberFormatException.forInputString(s);
+            i++;
+        }
+        multmin = limit / radix;
+        while (i &lt; len) {
+            // Accumulating negatively avoids surprises near MAX_VALUE
+            digit = Character.digit(s.charAt(i++),radix);
+            if (digit &lt; 0) {
+                throw NumberFormatException.forInputString(s);
+            }
+            if (result &lt; multmin) {
+                throw NumberFormatException.forInputString(s);
+            }
+            result *= radix;
+            if (result &lt; limit + digit) {
+                throw NumberFormatException.forInputString(s);
+            }
+            result -= digit;
+        }
+    } else {
+        throw NumberFormatException.forInputString(s);
+    }
+    return negative ? result : -result;
+}
+</code></pre>
+<p>该函数是我们常用的<code>valueOf</code>的实际实现，将一个字符串转为相应的整数。整体实现比较简单：先判断第一位是否为符号位'+/-'，然后用while循环遍历剩下的每一位。其中，在将每一个字符转为数字时，调用的是<code>Character</code>里面的方法，具体查看源代码可以发现，里面的基本逻辑也是采用打表的方式实现。</p></li>
+</ul>
+<h3 id="-1">位运算</h3>
+<p>Integer源代码中有很多位运算的函数，大部分都是参考<em>《Hacker's Delight》</em>中的算法来实现的。很值得研究。下面对每一个函数进行分析。</p>
+<ul>
+<li><p>1. <strong><code>highestOneBit</code>函数，寻找最高位的1</strong></p>
+<pre><code class="java language-java">public static int highestOneBit(int i) {
+    // HD, Figure 3-1
+    i |= (i &gt;&gt;  1);
+    i |= (i &gt;&gt;  2);
+    i |= (i &gt;&gt;  4);
+    i |= (i &gt;&gt;  8);
+    i |= (i &gt;&gt; 16);
+    return i - (i &gt;&gt;&gt; 1);
+}
+</code></pre>
+<p>该函数返回一个整数，其bit位表示只包含一个1，或者不包含1。并且，1所在的位置和传入参数i的最高位1所在位置相同。</p>
+<p>算法思想：从最高位1的位置开始，把后面的位都变为1，变成<code>00..011111..111</code>的这种形式，记为x；然后，整体右移一位，记为y；最后x - y得到最终结果。</p>
+<p>注意，代码中的<code>算术右移</code>和<code>逻辑右移</code>的使用区别。</p></li>
+<li><p>2. <strong><code>lowestOneBit</code>函数，寻找最低位的1</strong></p>
+<pre><code class="java language-java">public static int lowestOneBit(int i) {
+    // HD, Section 2-1
+    return i &amp; -i;
+}
+</code></pre>
+<p>这个函数和上面的类似，只不过返回的是最低位的1。实现思路很简单，直接和它的负数做<code>位与</code>运算就能得到结果。</p>
+<p>原理：计算机中，通常负数都是采用<code>补码</code>的形式表示（最高位为符号位，补码就是：<code>按位取反加1</code>）。假设一个整数的bit表示为<code>xx..x10..0</code>,则它的负数表示为<code>yy..y10..0</code>，其中，x部分和y部分都是相反的。因此，按位与就能得到结果。   </p></li>
+
+<li><p>3. <strong><code>numberOfLeadingZeros</code>函数，寻找前导0的个数</strong></p>
+<pre><code class="java language-java">public static int numberOfLeadingZeros(int i) {
+    // HD, Figure 5-6
+    if (i == 0)
+        return 32;
+    int n = 1;
+    if (i &gt;&gt;&gt; 16 == 0) { n += 16; i &lt;&lt;= 16; }
+    if (i &gt;&gt;&gt; 24 == 0) { n +=  8; i &lt;&lt;=  8; }
+    if (i &gt;&gt;&gt; 28 == 0) { n +=  4; i &lt;&lt;=  4; }
+    if (i &gt;&gt;&gt; 30 == 0) { n +=  2; i &lt;&lt;=  2; }
+    n -= i &gt;&gt;&gt; 31;
+    return n;
+}
+</code></pre>
+<p>这个函数返回一个整数的bit位表示的前导0的个数。</p>
+<p>实现思路：分批统计。先统计前16位里的0的个数，然后统计过的16位向左移出。然后统计后面8位、4位、2位、1位。</p></li>
+<li><p>4. <strong><code>numberOfTrailingZeros</code>函数，寻找后缀0的个数</strong></p>
+<pre><code class="java language-java">public static int numberOfTrailingZeros(int i) {
+    // HD, Figure 5-14
+    int y;
+    if (i == 0) return 32;
+    int n = 31;
+    y = i &lt;&lt;16; if (y != 0) { n = n -16; i = y; }
+    y = i &lt;&lt; 8; if (y != 0) { n = n - 8; i = y; }
+    y = i &lt;&lt; 4; if (y != 0) { n = n - 4; i = y; }
+    y = i &lt;&lt; 2; if (y != 0) { n = n - 2; i = y; }
+    return n - ((i &lt;&lt; 1) &gt;&gt;&gt; 31);
+}
+</code></pre>
+<p>这个函数返回一个整数的bit位表示的后缀0的个数。实现的思路基本和前面的函数相反：先判断是否等于0，然后依次统计后面的16位、8位、4位、2位、1位。</p></li>
+<li><p>5. <strong><code>bitCount</code>函数，统计一个数中所含1的个数</strong></p>
+<pre><code class="java language-java">public static int bitCount(int i) {
+    // HD, Figure 5-2
+    i = i - ((i &gt;&gt;&gt; 1) &amp; 0x55555555);  // ①
+    i = (i &amp; 0x33333333) + ((i &gt;&gt;&gt; 2) &amp; 0x33333333);  // ②
+    i = (i + (i &gt;&gt;&gt; 4)) &amp; 0x0f0f0f0f; // ③
+    i = i + (i &gt;&gt;&gt; 8);  // ④
+    i = i + (i &gt;&gt;&gt; 16); // ⑤
+    return i &amp; 0x3f;  // 多一次 '&amp;' 操作
+}
+</code></pre>
+<p>该函数返回一个整数的bit位表示中1的个数。实现的非常巧妙，在大一的课上就遇到过，一直没有好好分析过。接下来，详细分析一下代码思路。</p>
+<p><strong>算法思想</strong>：分批统计。先统计<code>每2个</code>bit位的，然后统计<code>每4个</code>bit位的，接着8个、16个、32个，得到结果。按照这种思路写代码如下：</p>
+<pre><code class="java language-java">public static int myBitCount(int i) {
+    i = ((i &gt;&gt;&gt; 1) &amp; 0x55555555) + (i &amp; 0x55555555);  // ① 少一次 '&amp;' 操作
+    i = ((i &gt;&gt;&gt; 2) &amp; 0x33333333) + (i &amp; 0x33333333);  // ② 一样
+    i = ((i &gt;&gt;&gt; 4) &amp; 0x0f0f0f0f) + (i &amp; 0x0f0f0f0f);  // ③ 少一次 '&amp;' 操作
+    i = ((i &gt;&gt;&gt; 8) &amp; 0x00ff00ff) + (i &amp; 0x00ff00ff);  // ④  少两次 '&amp;' 操作
+    i = ((i &gt;&gt;&gt; 16) &amp; 0x0000ffff) + (i &amp; 0x0000ffff);  // ⑤ 少两次 '&amp;' 操作
+    return i;
+}
+</code></pre>
+<p>上面两种实现的思路是一样的。不过，我的实现比源码稍微低效点😂（源码操作次数比我的少）。第一次操作，源码中采用减法的方式比下面的少一次位与操作（两种实现的结果一样，读者可以模拟试试）。剩下的几步基本是一样的（第2步一样，第3步少一次，第4和5步少两次）。这样操作是基于：一个整数的1的个数最多为32个，能用一个byte表示。所以，源码中的后几步都忽略了高位的最终结果，只把其右移到低位相加，让最终结果存在低位，然后再通过<code>i &amp; 0x3f</code>取出来。</p></li>
+<li><p>6. <strong><code>rotateLeft</code>和<code>rotateRight</code>函数，左旋和右旋函数</strong></p>
+<pre><code class="java language-java">public static int rotateLeft(int i, int distance) {
+    return (i &lt;&lt; distance) | (i &gt;&gt;&gt; -distance);
+}
+public static int rotateRight(int i, int distance) {
+    return (i &gt;&gt;&gt; distance) | (i &lt;&lt; -distance);
+}
+</code></pre>
+<p>这两个函数，将一个整数的bit位表示，根据distance进行旋转。以左旋为例：假设一个数的bit位表示为：<code>abcd..hijklmn</code>，左旋的distance为4，那么左旋后的结果应该为<code>..hijklmnabcd</code>。实现的思路很简单：<code>左移distance | 右移(32 - distance)</code>即可。</p>
+<p>注意：由于一个整数为32位bits，所以左移和右移操作最多只能移32位。因此，实际的distance需要对32取余（java语言后自动执行，我们不需要管）。以左旋为例，如下演示：</p>
+<ul>
+<li>1. 需要求<code>(i &lt;&lt; distance) | (i &gt;&gt;&gt; (32 - distance))</code></li>
+<li>2. 由于<code>i &gt;&gt;&gt; (32 - distance)</code> =&gt; <code>i &gt;&gt;&gt; (32 + (-distance))</code> =&gt; <code>i &gt;&gt;&gt; -distance</code></li>
+<li>3. 得到<code>(i &lt;&lt; distance) | (i &gt;&gt;&gt; -distance)</code></li></ul></li>
+<li><p>7. <strong><code>reverse</code>函数，反转整数的bit位</strong></p>
+<pre><code class="java language-java">public static int reverse(int i) {
+    // HD, Figure 7-1
+    i = (i &amp; 0x55555555) &lt;&lt; 1 | (i &gt;&gt;&gt; 1) &amp; 0x55555555;   // 每1位
+    i = (i &amp; 0x33333333) &lt;&lt; 2 | (i &gt;&gt;&gt; 2) &amp; 0x33333333;   // 每2位
+    i = (i &amp; 0x0f0f0f0f) &lt;&lt; 4 | (i &gt;&gt;&gt; 4) &amp; 0x0f0f0f0f;   // 每4位
+    i = (i &lt;&lt; 24) | ((i &amp; 0xff00) &lt;&lt; 8) |  // 每8位
+        ((i &gt;&gt;&gt; 8) &amp; 0xff00) | (i &gt;&gt;&gt; 24);  // 每16位
+    return i;
+}
+</code></pre>
+<p>该函数将一个整数的bit位表示颠倒后返回。实现的思路和bitCount函数的思路相似：先每1位进行反转，然后每2位进行反转，接着每4位、每8位、每16位，最后得到结果。下面以16个bits示例，假设原数是<code>abcdefghijklmnop</code>，反转后的数应该是<code>ponmlkjihgfedcba</code>:
+<center><code>a b c d e f g h i j k l m n o p</code>   每1位</center> 
+<center><code>ba dc fe hg ji lk nm po</code>   每2位</center>
+<center><code>dcba hgfe lkji ponm</code>   每4位</center>
+<center><code>hgfedcba ponmlkji</code> 每8位</center>
+<center><code>ponmlkjihgfedcba</code>  得到结果</center></p></li>
+<li><p>8. <strong><code>signum</code>函数，符号函数</strong></p>
+<pre><code class="java language-java">public static int signum(int i) {
+    // HD, Section 2-7
+    return (i &gt;&gt; 31) | (-i &gt;&gt;&gt; 31);
+}
+</code></pre>
+<p>该函数返回一个数的符号，如果是正数，返回1；是0返回0，是负数，返回-1；</p>
+<p>算法充分利用了算术右移和逻辑右移的区别。比较容易理解。</p></li>
+<li><p>9. <strong><code>reverseBytes</code>函数，按byte反转</strong></p>
+<pre><code class="java language-java">public static int reverseBytes(int i) {
+    return ((i &gt;&gt;&gt; 24)           ) |
+           ((i &gt;&gt;   8) &amp;   0xFF00) |
+           ((i &lt;&lt;   8) &amp; 0xFF0000) |
+           ((i &lt;&lt; 24));
+}
+</code></pre>
+<p>这个函数，和之前的reverse函数相似，相当于从每8位（1byte=8bits）开始反转。实现也很暴力、直观。</p></li>
+</ul>
+<h3 id="cache">cache</h3>
+<pre><code class="java language-java">public static Integer valueOf(int i) {
+    if (i &gt;= IntegerCache.low &amp;&amp; i &lt;= IntegerCache.high)
+        return IntegerCache.cache[i + (-IntegerCache.low)];
+    return new Integer(i);
+}
+</code></pre>
+<p>　　从上面的代码中，可以发现在请求int的包装对象时，Integer内部有一个叫<code>IntegerCache</code>的私有内部类来做一部分对象的缓存。当第二次请求同样整数的Integer包装对象时，会返回同一个对象。也就是说，使用<code>==</code>运算符时，会返回true。这个缓存只有在第一次使用时，才会初始化。从代码中可以看到是使用静态代码块的方式，进行初始化的，并且只有静态字段。</p>
+<p>　　缓存的范围默认位<strong>-128 ～ 127</strong>，其中最大值是可以通过jvm的启动参数<code>-XX:AutoBoxCacheMax</code>来控制，但是最小不能小于127。从代码中可以看到，缓存是通过一个数组来实现的，因此，能够缓存的最大值，理论上是<code>Integer.MAX_VALUE - 128 - 1</code>。</p>
+<h3 id="-2">其他</h3>
+<ul>
+<li><strong><code>hashcode</code>函数</strong></li>
+</ul>
+<pre><code class="java language-java">@Override
+public int hashCode() {
+    return Integer.hashCode(value);
+}
+
+public static int hashCode(int value) {
+     return value;
+}
+</code></pre>
+<p>　　Integer对象的hashcode函数实现的非常简单。从代码中可以看出，是直接返回它的int值的。</p>
+<h3 id="-3">总结</h3>
+<pre><code>本文详细分析了JDK中Integer的源代码的大部分实现。可以发现，里面有很多使用`打表`和`位操作`来优化的情况，很值得学习。  
+源代码中还有一些牵扯到unsigned的部分没有涉及。
+</code></pre>
+		</div>
+	</body>
+</html>

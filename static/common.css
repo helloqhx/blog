@@ -48,7 +48,7 @@ h3 {
 .main center,
 .main li {
 	line-height: 1.5;
-	font-size: 13px;
+	font-size: 14px;
 	color: #666;
 }
 .main p {
@@ -68,6 +68,6 @@ h3 {
 }
 .main code.hljs {
 	background: #eee;
-	font: normal 12px Monaco, Consolas, sans-serif;
+	font: normal 13px Monaco, Consolas, sans-serif;
 	-webkit-font-smoothing: auto;
 }
