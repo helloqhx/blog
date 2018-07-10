@@ -4,11 +4,14 @@
 	padding: 0;
 }
 body {
-	background: #fffffa;
 	font-family: Consolas, Monaco, Helvetica, Arial, "Microsoft YaHei", sans-serif;
+	color: #666;
+	line-height: 1.5;
+	font-size: 14px;
 }
 h1,h2,h3,h4,h5,h6 {
 	font-weight: 400;
+	color: #333;
 }
 
 h1 {
@@ -21,8 +24,17 @@ h2 {
 	font-size: 20px;
 }
 h3 {
+    font-size: 18px;
+    border-left: 5px solid #ff6666;
+    border-radius: 3px;
+    padding: 10px;
+    background: #eeffee;
+    color: #555;
 	margin: 20px 0;
-	font-size: 18px;
+}
+h4 {
+	margin: 15px 0;
+	font-size: 16px; 
 }
 @media screen and (max-width: 800px) {
 	.main {
@@ -43,13 +55,6 @@ h3 {
 		list-style: none;
 		padding-left: 20px;
 	}
-}
-.main p,
-.main center,
-.main li {
-	line-height: 1.5;
-	font-size: 14px;
-	color: #666;
 }
 .main p {
 	margin: 0.5em;

@@ -250,11 +250,11 @@ public static int rotateRight(int i, int distance) {
 }
 </code></pre>
 <p>该函数将一个整数的bit位表示颠倒后返回。实现的思路和bitCount函数的思路相似：先每1位进行反转，然后每2位进行反转，接着每4位、每8位、每16位，最后得到结果。下面以16个bits示例，假设原数是<code>abcdefghijklmnop</code>，反转后的数应该是<code>ponmlkjihgfedcba</code>:
-<center><code>a b c d e f g h i j k l m n o p</code>   每1位</center> 
-<center><code>ba dc fe hg ji lk nm po</code>   每2位</center>
-<center><code>dcba hgfe lkji ponm</code>   每4位</center>
-<center><code>hgfedcba ponmlkji</code> 每8位</center>
-<center><code>ponmlkjihgfedcba</code>  得到结果</center></p></li>
+<center><code>a b c d e f g h i j k l m n o p</code> 每1位</center>
+<center><code>ba dc fe hg ji lk nm po</code> 每2位</center>
+<center><code>dcba hgfe lkji ponm</code> 每4位</center>
+<center><code>hgfedcba ponmlkji</code>   每8位</center>
+<center><code>ponmlkjihgfedcba</code>    得到结果</center></p></li>
 <li><p>8. <strong><code>signum</code>函数，符号函数</strong></p>
 <pre><code class="java language-java">public static int signum(int i) {
     // HD, Section 2-7
@@ -284,22 +284,20 @@ public static int rotateRight(int i, int distance) {
 <p>　　缓存的范围默认位<strong>-128 ～ 127</strong>，其中最大值是可以通过jvm的启动参数<code>-XX:AutoBoxCacheMax</code>来控制，但是最小不能小于127。从代码中可以看到，缓存是通过一个数组来实现的，因此，能够缓存的最大值，理论上是<code>Integer.MAX_VALUE - 128 - 1</code>。</p>
 <h3 id="-2">其他</h3>
 <ul>
-<li><strong><code>hashcode</code>函数</strong></li>
-</ul>
+<li><p><strong><code>hashcode</code>函数</strong></p>
 <pre><code class="java language-java">@Override
 public int hashCode() {
     return Integer.hashCode(value);
 }
-
 public static int hashCode(int value) {
      return value;
 }
 </code></pre>
-<p>　　Integer对象的hashcode函数实现的非常简单。从代码中可以看出，是直接返回它的int值的。</p>
+<p>　　Integer对象的hashcode函数实现的非常简单。从代码中可以看出，是直接返回它的int值的。</p></li>
+</ul>
 <h3 id="-3">总结</h3>
-<pre><code>本文详细分析了JDK中Integer的源代码的大部分实现。可以发现，里面有很多使用`打表`和`位操作`来优化的情况，很值得学习。  
-源代码中还有一些牵扯到unsigned的部分没有涉及。
-</code></pre>
+<p>本文详细分析了JDK中Integer的源代码的大部分实现。可以发现，里面有很多使用<code>打表</code>和<code>位操作</code>来优化的情况，很值得学习。<br />
+源代码中还有一些牵扯到unsigned的部分没有涉及。</p>
 		</div>
 	</body>
 </html>
