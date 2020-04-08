@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>mysql_performance_optimization - Henson's Memo</title>
+		<link rel="stylesheet" href="../static/common.css">
+		<link rel="stylesheet" href="../static/highlight/tomorrow.min.css">
+		<script src="../static/highlight/highlight.min.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		<style type="text/css">
+		</style>
+	</head>
+	<body>
+		<div class="main">
+		<h3 id="mysql">Mysql优化建议</h3>
+<ol>
+<li>永远不要让mysql使用swap内存，会极大的降低性能。</li>
+</ol>
+<h3 id="hash">存储hash类型数据的几条性能优化建议：</h3>
+<ol>
+<li>使用合适的charset，一般ascii就够了，不需要utf8。utf8在索引、排序等上面占用更多的内存和磁盘。</li>
+<li>使用固定长度（fix-length）、非空的（non-null）的column来存储。</li>
+<li>使用binary类型，比如对于md5存储：binary(16) &gt; char(32) &gt; varchar(100)。</li>
+<li>使用前缀索引，如果使用前几个字符就能区分，则尽量使用前缀索引，更小的索引，意味着更好的性能：Smaller → More cacheable → Less I/O → Faster. </li>
+<li>对于较长的字段，比如url，可以计算其crc32或者md5来加快索引。</li>
+<li>crc32只需一个int（4bytes）就可以存储，md5需要16个bytes。crc32更容易碰撞，但是在查询时，使用其作为其中的“最左条件”，可以过滤掉很多数据，从而加快数据。</li>
+</ol>
+<p>具体参见：<a href="https://www.xaprb.com/blog/2009/02/12/5-ways-to-make-hexadecimal-identifiers-perform-better-on-mysql/">5 Ways to Make Hexadecimal Identifiers Perform Better on MySQL</a></p>
+<h3 id="mysql-1">Mysql通用配置参数优化：</h3>
+<ul>
+<li>max_connections: 同时可以建立的连接数。这个参数可以在服务器压力顶峰时，计算出来。或者出现'Too many connections'的错误时，可以适当增加。</li>
+<li>query<em>cache</em>size/query<em>cache</em>type: 在8.0中已经删除，不推荐使用。</li>
+<li>log_bin: 是否开启bin log，在错误恢复，以及备份时需要。</li>
+<li>skip<em>name</em>resolve: 如果都使用IP连接，可以避免DNS查询。</li>
+</ul>
+<h3 id="innodb">Innodb存储引擎优化实践：</h3>
+<ol>
+<li>最重要的几个配置参数，重要程度依次递减：<ul>
+<li>innodb_buffer_pool_size：设置为服务器的70%左右最好。buffer_pool时用来存储cache数据、索引数据等等，更大的缓存，意味着能将更多的数据（索引）存入内存，从而提高性能。Innodb严重依赖这个参数。</li>
+<li>innodb_log_file_size：Innodb在写入磁盘前，先将更新的数据写入log，所以，更大log size意味着更高的更新效率，但是同时增加了从crash恢复过来的时间。新版的mysql(5.6+)，可以最大设置为4G。这个参数是需要根据业务算出来：具体算法参见：<a href="https://www.percona.com/blog/2008/11/21/how-to-calculate-a-good-innodb-log-file-size/">How to calculate a good InnoDB log file size</a></li>
+<li>innodb_flush_method：设置数据如何从缓存和log中被flush到磁盘。推荐使用O_DIRECT，避免与OS的buffer形成双缓存。具体的可参见<a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_method">官方文档</a></li>
+<li>innodb_log_buffer_size: 设置在一个事务还未被提交时，脏数据存放位置的大小。目前，默认的设置16M，能够满足大多数需求。这也是个需要根据业务计算的参数。</li>
+<li>innodb_flush_log_at_trx_commit：控制事务ACID特性的参数。默认为1，表示完全遵循ACID。如果为了效率设置为0或者2，具体参见<a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit">文档</a></li>
+<li>innodb_file_per_table: 是否每一个表一个文件，而不是共享文件。推荐开启。</li>
+<li>innodb_buffer_pool_instances：设置多个pool instances可避免锁竞争。默认为8个(如果pool size大于1G)。</li>
+<li>innodb_thread_concurrency</li></ul></li>
+</ol>
+		</div>
+	</body>
+</html>

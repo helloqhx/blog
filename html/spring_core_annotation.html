@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>spring_core_annotation - Henson's Memo</title>
+		<link rel="stylesheet" href="../static/common.css">
+		<link rel="stylesheet" href="../static/highlight/tomorrow.min.css">
+		<script src="../static/highlight/highlight.min.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		<style type="text/css">
+		</style>
+	</head>
+	<body>
+		<div class="main">
+		<h1 id="springframework">Spring framework 常用注解</h1>
+<h3 id="springcoreannotations">Spring Core Annotations</h3>
+<p>spring的核心注解。存在于sping framework的<span style="text-decoration:underline;">org.springframework.beans.factory.annotation</span>和<span style="text-decoration:underline;">org.springframework.context.annotation</span>的包下面<br />
+  <br/></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">注解</th>
+<th style="text-align:left;">使用范围</th>
+<th style="text-align:left;">常用参数</th>
+<th style="text-align:left;">描述</th>
+<th style="text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;"><code>@Autowired</code></td>
+<td style="text-align:left;">field、method、contructor、parameter</td>
+<td style="text-align:left;"><strong>required</strong>: Boolean 是否必须</td>
+<td style="text-align:left;">依赖注入。根据类型和名字来注入bean</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Bean</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>name/value</strong>: String</td>
+<td style="text-align:left;">标记是个Bean</td>
+<td style="text-align:left;">如果在method上，则该类必须用@Configuration标记</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Qualifier</code></td>
+<td style="text-align:left;">field、class、method、parameter</td>
+<td style="text-align:left;"><strong>name/value</strong>: String 限定的bean名字</td>
+<td style="text-align:left;">配合@Autowired使用，通过bean id或者name来限定具体注入的对象</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Primary</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"></td>
+<td style="text-align:left;">在有多个相同类型的bean时，优先选择该对象</td>
+<td style="text-align:left;">和@Qualifier一样都是帮助spring选择要注入的bean的，@Qualifier是在要注入的地方使用，@Primary是在被注入对象上声明</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Value</code></td>
+<td style="text-align:left;">field、method、parameter</td>
+<td style="text-align:left;"><strong>value</strong>: String</td>
+<td style="text-align:left;">注入一个值，可以使用SpEL，从配置文件中读取</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@DependsOn</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value</strong>: String 依赖的bean名</td>
+<td style="text-align:left;">实例化该对象时需要<strong>隐式依赖</strong>其他的对象</td>
+<td style="text-align:left;">典型的像JDBC的driver或者静态对象</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Lazy</code></td>
+<td style="text-align:left;">class、method、constructor、parameter、field</td>
+<td style="text-align:left;">value: Boolean 是否延迟加载</td>
+<td style="text-align:left;">在需要的时候才实例化</td>
+<td style="text-align:left;">默认spring会在启动时实例化扫描到的所有bean</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Scope</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value/scopeName</strong>: String scope名字</td>
+<td style="text-align:left;">对象的scope</td>
+<td style="text-align:left;">默认spring的注入bean的scope是单例。可以设置为prototype：每一个都不同，在springmvc里还可以有request、session等特定的类型</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Profile</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value</strong>: String[] profile名字数组</td>
+<td style="text-align:left;">在列表中激活的profile才会使用该对象（@Bean或@Component）</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Import</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;">value: class[] 导入的类名</td>
+<td style="text-align:left;">手动导入的配置对象等</td>
+<td style="text-align:left;">在没有被scan到时，可以使用该注解手动导入</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ImportResource</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value/locations</strong>: String[] 导入的xml配置路径</td>
+<td style="text-align:left;">要导入的xml配置文件的路径，配合@Configuration使用</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@PropertySource</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value</strong>: String[] 导入的配置名<br/>ignoreResourceNotFound: Boolean 当没找到时忽略<br/>encoding: String 配置文件编码</td>
+<td style="text-align:left;">手动导入的配置资源文件，配合@Configuration使用</td>
+<td style="text-align:left;"><strong>可重复使用</strong><br/>默认spring是会从src/main/resources下面读取application.properties(.yml)来作为配置文件的，可以通过该注解导入其他配置资源文件</td>
+</tr>
+</tbody>
+</table>
+<h3 id="springbeanannotations">Spring Bean Annotations</h3>
+<p>spring声明bean的注解。在<span style="text-decoration:underline;">org.springframework.stereotype</span>包下，有几个不同用途的注解，用来声明需要注入到<code>ApplicationContext</code>中的bean。在应用声明了<code>@ComponentScan</code>注解后，spring会自动扫描带有这些注解的类来初始化不同的bean。
+  <br/></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">注解</th>
+<th style="text-align:left;">使用范围</th>
+<th style="text-align:left;">常用参数</th>
+<th style="text-align:left;">描述</th>
+<th style="text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;"><code>@ComponentScan</code></td>
+<td style="text-align:left;">class&nbsp;&nbsp;&nbsp;</td>
+<td style="text-align:left;"><strong>basePackages/value</strong>: String[] 要扫描的包</td>
+<td style="text-align:left;">标记需要扫描的包，帮助spring更快的找到依赖</td>
+<td style="text-align:left;">这个注解不是用来声明bean的，是个helper类型的注解</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Component</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value</strong>: String bean的名字</td>
+<td style="text-align:left;">声明这是个bean类</td>
+<td style="text-align:left;">value用来声明bean的别名，默认用首字母小写的类名作为名字。spring会自动扫描带有该注解的类作为bean</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Repository</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value</strong>: String bean的名字</td>
+<td style="text-align:left;">声明这是个数据层的bean类</td>
+<td style="text-align:left;">是<code>@Component</code>的别名注解。目的是为了区分这是用于数据层的bean。另外，spring会自动转换该类的中的exception为spring的<code>DataAccessExeption</code></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Service</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value</strong>: String bean的名字</td>
+<td style="text-align:left;">声明这是个业务逻辑层的bean类</td>
+<td style="text-align:left;">是<code>@Component</code>的别名注解。目的是为了区分这是用于业务逻辑层的bean</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Controller</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value</strong>: String bean的名字</td>
+<td style="text-align:left;">声明这是个spring mvc中的controller的bean类</td>
+<td style="text-align:left;">是<code>@Component</code>的别名注解。目的是为了区分这是用于控制层的bean</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Configuration</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>value</strong>: String bean的名字</td>
+<td style="text-align:left;">声明这个类中含有<code>@Bean</code>注解的方法用来生成bean对象</td>
+<td style="text-align:left;">是<code>@Component</code>的别名注解。目的是为了标记该类可以生成其他bean</td>
+</tr>
+</tbody>
+</table>
+<h3 id="springwebannotations">Spring Web Annotations</h3>
+<p>spring中和web相关的注解。位于<span style="text-decoration:underline;">org.springframework.web.bind.annotation</span>包下。
+  <br/></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">注解</th>
+<th style="text-align:left;">使用范围</th>
+<th style="text-align:left;">常用参数</th>
+<th style="text-align:left;">描述</th>
+<th style="text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;"><code>@RequestMapping</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value/path</strong>: String[] 映射的路径<br/><strong>method</strong>: RequestMethod[]: 请求的方法列表</td>
+<td style="text-align:left;">声明一个api接口</td>
+<td style="text-align:left;">必须在<code>@Controller</code>注解声明的类下，<code>@GetMapping</code> <code>@PostMapping</code> <code>@PutMapping</code> <code>@DeleteMapping</code> <code>@PatchMapping</code>都是变体</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@RequestBody</code></td>
+<td style="text-align:left;">parameter</td>
+<td style="text-align:left;"><strong>required</strong>: Boolean 是否必须</td>
+<td style="text-align:left;">将请求的body映射到这个参数上</td>
+<td style="text-align:left;">反序列化依赖是spring根据content-type自动处理的</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@PathVariable</code></td>
+<td style="text-align:left;">parameter</td>
+<td style="text-align:left;"><strong>required</strong>: Boolean 是否必须<br/><strong>name/value</strong>: 参数名字</td>
+<td style="text-align:left;">将请求路径上的某部分映射到这个参数上</td>
+<td style="text-align:left;">在REST API上很有用</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@RequestParam</code></td>
+<td style="text-align:left;">parameter</td>
+<td style="text-align:left;"><strong>required</strong>: Boolean 是否必须<br/><strong>name/value</strong>: String 参数名字<br/><strong>defaultValue</strong>:默认值</td>
+<td style="text-align:left;">将请求的query参数映射到这个变量上</td>
+<td style="text-align:left;">类似的还有<code>@CookieValue</code> <code>@RequestHeader</code></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ResponseBody</code></td>
+<td style="text-align:left;">method、class</td>
+<td style="text-align:left;"></td>
+<td style="text-align:left;">将该方法返回的结果映射到返回的数据上</td>
+<td style="text-align:left;">以JSON格式序列化返回的对象，如果声明在<code>@RestController</code>中，则无需声明这个注解会自动进行JSON序列化</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ExceptionHandler</code></td>
+<td style="text-align:left;">method</td>
+<td style="text-align:left;"><strong>value</strong>: class[] 捕获的异常类型</td>
+<td style="text-align:left;">声明一个自定义的的异常处理器</td>
+<td style="text-align:left;">捕获的异常会作为参数传入该方法中</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ResponseStatus</code></td>
+<td style="text-align:left;">method、class</td>
+<td style="text-align:left;"><strong>code/value</strong>: HttpStatus<br/><strong>reason</strong>: String http message</td>
+<td style="text-align:left;">声明该接口返回的http status code</td>
+<td style="text-align:left;"></td>
+</tr>
+</tbody>
+</table>
+<p><br/>
+  其他的，如<code>@RestController</code>是<code>@Controller</code>和<code>@ResponesBody</code>的结合体;<code>@CrossOrigin</code>可以允许跨域访问该接口等。</p>
+<h3 id="springbootannotations">Spring Boot Annotations</h3>
+<p>由于spring有很多的配置项，如果手动去配置容易出错。所以spring boot 提供了自动化配置的功能。下面的注解位于<span style="text-decoration:underline;">org.springframework.boot.autoconfigure</span>和<span style="text-decoration:underline;">org.springframework.boot.autoconfigure.condition</span>下。
+  <br/></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">注解</th>
+<th style="text-align:left;">使用范围</th>
+<th style="text-align:left;">常用参数</th>
+<th style="text-align:left;">描述</th>
+<th style="text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;"><code>@SpringBootApplication</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>scanBasePackages</strong>: String[] 是@ComponentScan里参数的别名</td>
+<td style="text-align:left;">是<code>@Configuration</code> <code>@EnableAutoConfiguration</code> <code>@ComponentScan</code> 三个注解的结合体</td>
+<td style="text-align:left;">一般应该位于程序的入口main函数所在类上</td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@EnableAutoConfiguration</code></td>
+<td style="text-align:left;">class</td>
+<td style="text-align:left;"><strong>exclude</strong>: class[] 自动配置排除的类</td>
+<td style="text-align:left;">标记启用自动化配置</td>
+<td style="text-align:left;">启用这个注解后，spring自动在classpath中寻找beans并将其注入需要的对象中</td>
+</tr>
+</tbody>
+</table>
+<p><br/>
+  条件注解：当条件满足时才引入。和<code>@Configuration</code> <code>@Bean</code>一起使用，表示当某一个条件满足了才会引入该bean。
+  <br/></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">注解</th>
+<th style="text-align:left;">使用范围</th>
+<th style="text-align:left;">常用参数</th>
+<th style="text-align:left;">描述</th>
+<th style="text-align:left;">备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;"><code>@ConditionalOnClass</code> <br/> <code>@ConditionalOnMissingClas</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value</strong>: class[] 要匹配的类</td>
+<td style="text-align:left;">当classpath中有（没有）相应的类时才加载该bean</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ConditionalOnBean</code> <br/> <code>@ConditionalOnMissingBean</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>name</strong>: String[] 要匹配的bean名字</td>
+<td style="text-align:left;">当classpath中有（没有）相应的bean时才加载该对象</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ConditionalOnProperty</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>name</strong>: String[] 要匹配的属性名字<br/><strong>havingValue</strong>: String 需要的值</td>
+<td style="text-align:left;">当加载的属性中有该属性和值时才加载该bean</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ConditionalOnResource</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>resources</strong>: String[] 要匹配的资源名字</td>
+<td style="text-align:left;">当classpath中有该资源时才加载该bean</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@ConditionalExpression</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value</strong>: SpEL表达式</td>
+<td style="text-align:left;">当SpEL表达式满足时才加载该bean</td>
+<td style="text-align:left;"></td>
+</tr>
+<tr>
+<td style="text-align:left;"><code>@Conditional</code></td>
+<td style="text-align:left;">class、method</td>
+<td style="text-align:left;"><strong>value</strong>: Condition[]</td>
+<td style="text-align:left;">当指定的条件达成时才加载bean</td>
+<td style="text-align:left;">一般，需要定制条件时才需要</td>
+</tr>
+</tbody>
+</table>
+		</div>
+	</body>
+</html>
