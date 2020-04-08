@@ -7,7 +7,7 @@ body {
 	font-family: Consolas, Monaco, Helvetica, Arial, "Microsoft YaHei", sans-serif;
 	color: #666;
 	line-height: 1.5;
-	font-size: 14px;
+	font-size: 13px;
 }
 h1,h2,h3,h4,h5,h6 {
 	font-weight: 400;
@@ -42,8 +42,10 @@ h4 {
 		padding: 20px;
 	}
 	.main ul {
-		list-style: none;
 		padding-left: 10px;
+	}
+	.main ol {
+		padding-left: 20px;
 	}
 }
 @media screen and (min-width: 800px) {
@@ -52,8 +54,10 @@ h4 {
 		margin: 0 auto;
 	}
 	.main ul {
-		list-style: none;
 		padding-left: 20px;
+	}
+	.main ol {
+		padding-left: 30px;
 	}
 }
 .main p {
@@ -75,4 +79,25 @@ h4 {
 	background: #eee;
 	font: normal 13px Monaco, Consolas, sans-serif;
 	-webkit-font-smoothing: auto;
+}
+
+/* table */
+table {
+	margin: 0 auto;
+}
+table th, table td {
+	padding: 5px;
+}
+table, th, td {
+	border: 1px solid #ccc;
+	border-collapse: collapse;
+}
+
+table th {
+	font-weight: bold;
+	background: #eee;
+}
+
+table td {
+	font-size: 12px;
 }
