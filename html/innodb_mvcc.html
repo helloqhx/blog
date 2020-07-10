@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>innodb_mvcc - Henson's Memo</title>
+		<link rel="stylesheet" href="../static/common.css">
+		<link rel="stylesheet" href="../static/highlight/tomorrow.min.css">
+		<script src="../static/highlight/highlight.min.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		<style type="text/css">
+		</style>
+	</head>
+	<body>
+		<div class="main">
+		<p>InnoDB的MVCC机制</p>
+<p>MVCC全称为：Multiple Version Concurrency Control，即多版本并发控制。这是一种既保证数据一致性，又保证高并发性能的机制。即一行数据可能存在多个版本，每个事务看见的版本不一样。
+MVCC在InnoDB中是通过隐藏列和Undo日志来实现的。</p>
+<h3 id="">隐藏列</h3>
+<p>对于数据库中的每一行数据，其实除了我们可以看见的列以外，还有另外三个列：<code>DB_TRX_ID</code>、<code>DB_ROLL_PTR</code>、<code>DB_ROW_ID</code>。</p>
+<ul>
+<li>DB<em>TRX</em>ID：最后一个插入或者更新该记录的事务id，删除会当成更新来处理，同时在该行数据的头部标记一下</li>
+<li>DB<em>ROLL</em>PTR：指向undo log里的一条记录，通过undo log中的记录链，可以恢复出该记录之前版本的数据。</li>
+<li>DB<em>ROW</em>ID：对于InnoDB自动创建的主见索引时，该项有值，其他情况没有</li>
+</ul>
+<h3 id="undolog">undo log</h3>
+<p>undo log分为insert undo log和update undo log。undo log存储在共享表空间的rollback segment中。其存储的是一行数据的一个副本。
+insert的undo log在事务提交后，直接删除，因为该记录只有这个记录可见，
+update的undo log在事务提交后，会有专门的purge thread去处理，因为，可能多个事务需要用到该日志来构建之前的数据。</p>
+<p>DB<em>ROLL</em>PTR指向的是undo log的地址，如果有多个版本的话，通过这个指针可以找到之前的版本。</p>
+<h3 id="mvcc">MVCC的实现</h3>
+<p>为了实现一致性的读，InnoDB在每次读取操作时，会建立一个叫做<code>read view</code>的对象，里面包含三个值：<code>up_limit_id</code> <code>low_limit_id</code> <code>trx_ids</code>.</p>
+<ul>
+<li>up<em>limit</em>id: 当前活跃的事务中未提交的最小事务id</li>
+<li>low<em>limit</em>id: 当前活跃的事务中未提交的最大事务id + 1</li>
+<li>trx_ids: 活跃的事务id列表</li>
+</ul>
+<p>当一个事务读取数据时，对于每一行数据，通过其DB<em>TRX</em>ID和up<em>limit</em>id、low<em>limit</em>id进行判断，</p>
+<ul>
+<li>&lt; up<em>limit</em>id: 证明该条记录在当前事务开始之前就已经存在，并没有修改过，所以是对当前事务可见的；</li>
+<li>&gt; low<em>limit</em>id: 证明是当前事务创建后才的某个事务提交或者修改的数据，对当前事务肯定不可见。对于在之间的事务id;</li>
+<li>btween 则遍历trx<em>ids列表，如果在trx</em>ids中，则表示创建read view之后提交的，不可见，如果不在，则可见。</li>
+</ul>
+<p>注意，对于RR和RC生成read view的时机是不同的：</p>
+<ul>
+<li>RR: 在事务开启后的第一条查询语句时，生成，以后都用这个</li>
+<li>RC: 事务中的每个查询语句，都会生成新的read view.</li>
+</ul>
+<h3 id="-1">快照读/锁定读</h3>
+<p>一般的SELECT操作都是快照读，即读取的是数据的一个版本。锁定读，则是通过下面的几个语句实现：</p>
+<ul>
+<li>select … lock in share mode</li>
+<li>select … for update</li>
+<li>insert</li>
+<li>update</li>
+<li>delete</li>
+</ul>
+		</div>
+	</body>
+</html>

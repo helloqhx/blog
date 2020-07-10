@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<title>innodb_locks - Henson's Memo</title>
+		<link rel="stylesheet" href="../static/common.css">
+		<link rel="stylesheet" href="../static/highlight/tomorrow.min.css">
+		<script src="../static/highlight/highlight.min.js"></script>
+		<script>hljs.initHighlightingOnLoad();</script>
+		<style type="text/css">
+		</style>
+	</head>
+	<body>
+		<div class="main">
+		<h2 id="innodb">Innodb的各种锁</h2>
+<p>与MyISAM相比，InnoDB支持更细粒度的锁。</p>
+<h3 id="">锁类型</h3>
+<ul>
+<li><code>共享锁</code>(S, A Shared Lock): 允许读取一行数据</li>
+<li><code>排他锁</code>(X, A Exclusive Lock): 允许修改/删除一行数据</li>
+</ul>
+<p>共享锁只能和共享锁兼容，排他锁和其他锁都不兼容。如果一个事务T1获取了某一行上的S锁，则另一个事务也可以获取该行上的S锁。但是如果一个事务获取的是X锁，则其他事务需要等待。 </p>
+<h3 id="intentionlock">意向锁(Intention Lock)</h3>
+<p>InnoDB支持多粒度的锁，意向锁是表级锁。当事务想获取一个表上的S/X锁时，需要先获取这个表上的IS/IX锁，表示该事务即将对该表中的某些行，请求S/X锁了。意向锁不会阻塞除了全表扫描的其他任何请求。</p>
+<p>意向锁的意义在于，能够在更大粒度上控制锁的请求，如果不兼容，可以更快的失败，不用在去细粒度尝试，减少系统开销。</p>
+<h3 id="recordlock">行锁(Record Lock)</h3>
+<p>InnoDB支持行锁(Record Lock)，它总会锁住<code>索引记录</code>，如果没有任何一个索引，则会通过隐式的主键索引来锁定。</p>
+<ul>
+<li>UPDATE/DELETE/INSERT 或者 SELECT xx FROM t where xx FOR UPDATE 时，会对相关的行加上行X锁。</li>
+<li>SELECT xx FROM t where xx LOCK IN SHARE MODE时，会对相关记录加上行S锁。</li>
+</ul>
+<p>在默认情况下，多个事务读取同一条记录时，采用的是<code>一致性非锁定读</code>。这是通过InnoDB的MVCC机制来控制的。如果事务的隔离级别时RC(Read Committed)，则可以读取其他事务提交的数据；如果是RR(Repeatable Read)则读取的是事务开始的一个版本。如果想让在一个事务中读取的记录不能被修改，则可以通过上述两个语句给读取记录加上锁，这就是<code>一致性锁定读</code>。
+注意，这两个语句必须在事务中，需要在事务结束时释放锁。</p>
+<h3 id="gaplock">间隙锁(Gap Lock)</h3>
+<p>为了解决幻读问题(<code>Phantom Read</code>)：同一个事务中，前后两次对同一个条件下，读取的结果不一致。这个不一致是指：多了或者少了记录。InnoDB提供了间隙锁的机制，即锁定一个范围，不包括记录本身，不允许，其他事务在该范围内插入数据。间隙锁，只在非唯一索引或者只查询某个某一联合索引的某几列时，才生效，如果时唯一索引，则会采用行锁。</p>
+<p>间隙锁，是效率和并发之间的tradeoff，<strong>只在某些事务级别下生效</strong>。可以通过将事务的隔离级别设置为RC，或者通过参数<code>innodb_locks_unsafe_for_binlog</code>来关闭。在上述两个条件下，除了外间约束和唯一性检查时会触发Gap Lock，其他都是用Record Lock。</p>
+<p>注意，间隙锁之间互相没有影响，是兼容的，不同事务可以获取同一个范围的间隙锁。因此，间隙S/X锁没有任何区别，其目的只有一个：不允许在该范围内插入数据。</p>
+<h3 id="nextkeylock">Next-Key Lock</h3>
+<p>该锁是Gap Lock + Record Lock的合体，是个左开右闭的一个区间，即锁住一段范围，和记录本身。如果一个表中有10、11、13、20这几个值，则可以能的锁范围有：(-inf, 10], (10, 11], (11, 13], (13, +inf)。同样的，和Gap Lock一样，只有在某些事务级别生效。</p>
+<p>当查询条件命中记录，会给相应的记录加上next-key lock。对于非唯一索引下的的等值查询，也会给临近的范围加上相应的锁。</p>
+<h3 id="autoinclock">AUTO-INC Lock</h3>
+<p>该表是一种特殊的表锁，在某个表有自增列时发生。其特殊在：不需要等待事务结束，就可以释放。有一个配置项<code>innodb_autoinc_lock_mode</code>，来决定具体的行为:</p>
+<ul>
+<li>0: 表示所有的Insert相关的语句都要等待这个表锁</li>
+<li>1: 表示能明确知道插入条数的语句之间通过一个内存中的互斥量(Mutex)来对自增ID累加，但是对于无法知道具体插入条数的记录，还是使用表锁。</li>
+<li>2: 表示所有的插入操作都是用互斥量。但是这样会导致并发插入时，插入的值不一样，同时，如果是基于Statement的备份机制的话，会导致主从数据不一致。</li>
+</ul>
+<p>注意：
+  自增id不会被回滚。
+  如果一个表中的自增id用完后，mysql会报duplicate-key的错误，当重启后，InnoDB会尝试使用一个没有被使用的id(可能是之前事务回滚后的id)。   </p>
+		</div>
+	</body>
+</html>
